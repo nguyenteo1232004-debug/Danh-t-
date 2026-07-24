@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luyện Tập Nhận Diện Danh Từ</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-color: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #555;
+        }
+        .timer-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .timer-progress {
+            height: 100%;
+            width: 100%;
+            background-color: #ff9800;
+            transition: width 0.1s linear, background-color 0.3s;
+        }
+        .word-card {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+            margin: 30px 0;
+            min-height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .word-card.correct {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .word-card.incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        button {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .btn-noun {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-not-noun {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-start {
+            background-color: #007bff;
+            color: white;
+            width: 100%;
+        }
+        .result-screen {
+            display: none;
+            text-align: left;
+        }
+        .result-screen h2 {
+            text-align: center;
+            color: #333;
+        }
+        .wrong-list-container {
+            margin-top: 20px;
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid #dc3545;
+            border-radius: 8px;
+            background-color: #fff5f5;
+        }
+        .wrong-list-header {
+            background-color: #dc3545;
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        .wrong-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            border-bottom: 1px solid #f2d6d6;
+            color: #721c24;
+        }
+        .wrong-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="start-screen">
+        <h2>Luyện Tập Nhận Diện Danh Từ</h2>
+        <p>100 từ loại ngẫu nhiên. Bạn có <b>5 giây</b> cho mỗi từ để chọn xem đó có phải là <b>Danh từ</b> hay không.</p>
+        <button class="btn-start" onclick="startGame()">Bắt Đầu</button>
+    </div>
+
+    <div id="game-screen" style="display: none;">
+        <div class="stats">
+            <span id="progress-text">Câu: 1 / 100</span>
+            <span id="score-text">Đúng: 0</span>
+        </div>
+        <div class="timer-bar">
+            <div id="timer-progress" class="timer-progress"></div>
+        </div>
+        <div id="word-card" class="word-card">Word</div>
+        <div class="btn-group">
+            <button class="btn-noun" onclick="submitAnswer(true)">Danh Từ</button>
+            <button class="btn-not-noun" onclick="submitAnswer(false)">Không Phải Danh Từ</button>
+        </div>
+    </div>
+
+    <div id="result-screen" class="result-screen">
+        <h2>KẾT QUẢ</h2>
+        <p style="text-align: center; font-size: 18px;" id="final-score"></p>
+        
+        <div id="wrong-container">
+            <h3>Danh sách các từ chọn sai / bỏ trống:</h3>
+            <div class="wrong-list-container">
+                <div class="wrong-list-header">
+                    <span>Từ</span>
+                    <span>Từ loại đúng</span>
+                </div>
+                <div id="wrong-list"></div>
+            </div>
+        </div>
+
+        <button class="btn-start" style="margin-top: 20px;" onclick="startGame()">Làm Lai</button>
+    </div>
+</div>
+
+<script>
+const rawWordBank = [
+    // 14 từ bắt buộc theo yêu cầu
+    { w: "mention", type: "Động từ", isNoun: false },
+    { w: "consider", type: "Động từ", isNoun: false },
+    { w: "guarantee", type: "Động từ", isNoun: false },
+    { w: "deliver", type: "Động từ", isNoun: false },
+    { w: "objective", type: "Danh từ", isNoun: true },
+    { w: "alternative", type: "Danh từ", isNoun: true },
+    { w: "initiative", type: "Danh từ", isNoun: true },
+    { w: "representative", type: "Danh từ", isNoun: true },
+    { w: "approval", type: "Danh từ", isNoun: true },
+    { w: "proposal", type: "Danh từ", isNoun: true },
+    { w: "renewal", type: "Danh từ", isNoun: true },
+    { w: "arrival", type: "Danh từ", isNoun: true },
+    { w: "disposal", type: "Danh từ", isNoun: true },
+    { w: "removal", type: "Danh từ", isNoun: true },
+
+    // 86 từ bổ sung (Danh từ, Động từ, Tính từ, Trạng từ)
+    { w: "development", type: "Danh từ", isNoun: true },
+    { w: "beautiful", type: "Tính từ", isNoun: false },
+    { w: "quickly", type: "Trạng từ", isNoun: false },
+    { w: "decision", type: "Danh từ", isNoun: true },
+    { w: "analyze", type: "Động từ", isNoun: false },
+    { w: "efficiency", type: "Danh từ", isNoun: true },
+    { w: "important", type: "Tính từ", isNoun: false },
+    { w: "strongly", type: "Trạng từ", isNoun: false },
+    { w: "contract", type: "Danh từ", isNoun: true },
+    { w: "negotiate", type: "Động từ", isNoun: false },
+    { w: "applicant", type: "Danh từ", isNoun: true },
+    { w: "expensive", type: "Tính từ", isNoun: false },
+    { w: "carefully", type: "Trạng từ", isNoun: false },
+    { w: "requirement", type: "Danh từ", isNoun: true },
+    { w: "perform", type: "Động từ", isNoun: false },
+    { w: "solution", type: "Danh từ", isNoun: true },
+    { w: "creative", type: "Tính từ", isNoun: false },
+    { w: "easily", type: "Trạng từ", isNoun: false },
+    { w: "equipment", type: "Danh từ", isNoun: true },
+    { w: "expand", type: "Động từ", isNoun: false },
+    { w: "management", type: "Danh từ", isNoun: true },
+    { w: "successful", type: "Tính từ", isNoun: false },
+    { w: "completely", type: "Trạng từ", isNoun: false },
+    { w: "strategy", type: "Danh từ", isNoun: true },
+    { w: "promote", type: "Động từ", isNoun: false },
+    { w: "employee", type: "Danh từ", isNoun: true },
+    { w: "effective", type: "Tính từ", isNoun: false },
+    { w: "recently", type: "Trạng từ", isNoun: false },
+    { w: "investment", type: "Danh từ", isNoun: true },
+    { w: "cancel", type: "Động từ", isNoun: false },
+    { w: "customer", type: "Danh từ", isNoun: true },
+    { w: "accurate", type: "Tính từ", isNoun: false },
+    { w: "frequently", type: "Trạng từ", isNoun: false },
+    { w: "revenue", type: "Danh từ", isNoun: true },
+    { w: "identify", type: "Động từ", isNoun: false },
+    { w: "permission", type: "Danh từ", isNoun: true },
+    { w: "reliable", type: "Tính từ", isNoun: false },
+    { w: "properly", type: "Trạng từ", isNoun: false },
+    { w: "facility", type: "Danh từ", isNoun: true },
+    { w: "reduce", type: "Động từ", isNoun: false },
+    { w: "schedule", type: "Danh từ", isNoun: true },
+    { w: "active", type: "Tính từ", isNoun: false },
+    { w: "silently", type: "Trạng từ", isNoun: false },
+    { w: "budget", type: "Danh từ", isNoun: true },
+    { w: "maintain", type: "Động từ", isNoun: false },
+    { w: "industry", type: "Danh từ", isNoun: true },
+    { w: "financial", type: "Tính từ", isNoun: false },
+    { w: "happily", type: "Trạng từ", isNoun: false },
+    { w: "policy", type: "Danh từ", isNoun: true },
+    { w: "inform", type: "Động từ", isNoun: false },
+    { w: "department", type: "Danh từ", isNoun: true },
+    { w: "available", type: "Tính từ", isNoun: false },
+    { w: "slowly", type: "Trạng từ", isNoun: false },
+    { w: "procedure", type: "Danh từ", isNoun: true },
+    { w: "provide", type: "Động từ", isNoun: false },
+    { w: "agreement", type: "Danh từ", isNoun: true },
+    { w: "suitable", type: "Tính từ", isNoun: false },
+    { w: "directly", type: "Trạng từ", isNoun: false },
+    { w: "supervisor", type: "Danh từ", isNoun: true },
+    { w: "confirm", type: "Động từ", isNoun: false },
+    { w: "transaction", type: "Danh từ", isNoun: true },
+    { w: "flexible", type: "Tính từ", isNoun: false },
+    { w: "urgently", type: "Trạng từ", isNoun: false },
+    { w: "location", type: "Danh từ", isNoun: true },
+    { w: "inspire", type: "Động từ", isNoun: false },
+    { w: "agency", type: "Danh từ", isNoun: true },
+    { w: "patient", type: "Tính từ", isNoun: false },
+    { w: "perfectly", type: "Trạng từ", isNoun: false },
+    { w: "signature", type: "Danh từ", isNoun: true },
+    { w: "organize", type: "Động từ", isNoun: false },
+    { w: "performance", type: "Danh từ", isNoun: true },
+    { w: "complex", type: "Tính từ", isNoun: false },
+    { w: "normally", type: "Trạng từ", isNoun: false },
+    { w: "manufacturer", type: "Danh từ", isNoun: true },
+    { w: "suggest", type: "Động từ", isNoun: false },
+    { w: "opportunity", type: "Danh từ", isNoun: true },
+    { w: "sensitive", type: "Tính từ", isNoun: false },
+    { w: "extremely", type: "Trạng từ", isNoun: false },
+    { w: "resource", type: "Danh từ", isNoun: true },
+    { w: "participate", type: "Động từ", isNoun: false },
+    { w: "capacity", type: "Danh từ", isNoun: true },
+    { w: "productive", type: "Tính từ", isNoun: false },
+    { w: "clearly", type: "Trạng từ", isNoun: false },
+    { w: "complaint", type: "Danh từ", isNoun: true },
+    { w: "review", type: "Động từ", isNoun: false },
+    { w: "category", type: "Danh từ", isNoun: true }
+];
+
+let words = [];
+let currentIndex = 0;
+let score = 0;
+let wrongAnswers = [];
+let timer = null;
+let timerStartTime = 0;
+const TIME_LIMIT = 5000; // 5 giây
+
+function shuffle(array) {
+    let arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function startGame() {
+    words = shuffle(rawWordBank);
+    currentIndex = 0;
+    score = 0;
+    wrongAnswers = [];
+
+    document.getElementById("start-screen").style.display = "none";
+    document.getElementById("result-screen").style.display = "none";
+    document.getElementById("game-screen").style.display = "block";
+
+    showNextWord();
+}
+
+function showNextWord() {
+    if (currentIndex >= words.length) {
+        endGame();
+        return;
+    }
+
+    const wordObj = words[currentIndex];
+    const wordCard = document.getElementById("word-card");
+    
+    wordCard.className = "word-card";
+    wordCard.innerText = wordObj.w;
+
+    document.getElementById("progress-text").innerText = `Câu: ${currentIndex + 1} / ${words.length}`;
+    document.getElementById("score-text").innerText = `Đúng: ${score}`;
+
+    startTimer();
+}
+
+function startTimer() {
+    clearInterval(timer);
+    const progressBar = document.getElementById("timer-progress");
+    progressBar.style.width = "100%";
+    timerStartTime = Date.now();
+
+    timer = setInterval(() => {
+        const elapsed = Date.now() - timerStartTime;
+        const remainingPercent = Math.max(0, 100 - (elapsed / TIME_LIMIT) * 100);
+        
+        progressBar.style.width = `${remainingPercent}%`;
+
+        if (elapsed >= TIME_LIMIT) {
+            clearInterval(timer);
+            handleTimeOut();
+        }
+    }, 50);
+}
+
+function handleTimeOut() {
+    const currentWord = words[currentIndex];
+    wrongAnswers.push(currentWord);
+    
+    flashCard(false, () => {
+        currentIndex++;
+        showNextWord();
+    });
+}
+
+function submitAnswer(userChoice) {
+    clearInterval(timer);
+    const currentWord = words[currentIndex];
+    const isCorrect = (userChoice === currentWord.isNoun);
+
+    if (isCorrect) {
+        score++;
+    } else {
+        wrongAnswers.push(currentWord);
+    }
+
+    flashCard(isCorrect, () => {
+        currentIndex++;
+        showNextWord();
+    });
+}
+
+function flashCard(isCorrect, callback) {
+    const wordCard = document.getElementById("word-card");
+    wordCard.className = `word-card ${isCorrect ? 'correct' : 'incorrect'}`;
+    
+    setTimeout(() => {
+        callback();
+    }, 300);
+}
+
+function endGame() {
+    document.getElementById("game-screen").style.display = "none";
+    document.getElementById("result-screen").style.display = "block";
+
+    document.getElementById("final-score").innerText = `Điểm của bạn: ${score} / ${words.length}`;
+
+    const wrongListEl = document.getElementById("wrong-list");
+    wrongListEl.innerHTML = "";
+
+    if (wrongAnswers.length === 0) {
+        document.getElementById("wrong-container").style.display = "none";
+    } else {
+        document.getElementById("wrong-container").style.display = "block";
+        wrongAnswers.forEach(item => {
+            const row = document.createElement("div");
+            row.className = "wrong-item";
+            row.innerHTML = `<span><b>${item.w}</b></span><span>${item.type}</span>`;
+            wrongListEl.appendChild(row);
+        });
+    }
+}
+</script>
+
+</body>
+</html>
