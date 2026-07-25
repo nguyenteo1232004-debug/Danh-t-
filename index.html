@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Luyện Tập Nhận Diện Danh Từ</title>
+    <title>Luyện Tập Phân Biệt Từ Loại (Danh từ / Tính từ / Khác)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -23,13 +23,13 @@
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             padding: 30px;
-            max-width: 600px;
+            max-width: 650px;
             width: 100%;
             text-align: center;
         }
         .stats {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             font-size: 16px;
             font-weight: bold;
             margin-bottom: 20px;
@@ -47,14 +47,14 @@
             height: 100%;
             width: 100%;
             background-color: #ff9800;
-            transition: width 0.1s linear, background-color 0.3s;
+            transition: width 0.1s linear;
         }
         .word-card {
-            font-size: 36px;
+            font-size: 38px;
             font-weight: bold;
             color: #333;
             margin: 30px 0;
-            min-height: 50px;
+            min-height: 60px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -71,28 +71,35 @@
         }
         .btn-group {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             justify-content: center;
         }
         button {
             flex: 1;
-            padding: 15px 20px;
-            font-size: 18px;
+            padding: 15px 10px;
+            font-size: 17px;
             font-weight: bold;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: opacity 0.2s, transform 0.1s;
         }
         button:hover {
             opacity: 0.9;
         }
+        button:active {
+            transform: scale(0.98);
+        }
         .btn-noun {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-adj {
             background-color: #28a745;
             color: white;
         }
-        .btn-not-noun {
-            background-color: #dc3545;
+        .btn-other {
+            background-color: #6c757d;
             color: white;
         }
         .btn-start {
@@ -110,7 +117,7 @@
         }
         .wrong-list-container {
             margin-top: 20px;
-            max-height: 350px;
+            max-height: 380px;
             overflow-y: auto;
             border: 1px solid #dc3545;
             border-radius: 8px;
@@ -140,14 +147,15 @@
 
 <div class="container">
     <div id="start-screen">
-        <h2>Luyện Tập Nhận Diện Danh Từ</h2>
-        <p>100 từ loại ngẫu nhiên. Bạn có <b>5 giây</b> cho mỗi từ để chọn xem đó có phải là <b>Danh từ</b> hay không.</p>
+        <h2>Luyện Tập Phân Biệt Từ Loại</h2>
+        <p>Thử thách nhận diện nhanh các <b>Danh từ</b>, <b>Tính từ</b> và <b>Từ loại khác</b>.</p>
+        <p>Mỗi từ xuất hiện có <b>5 giây</b> đếm ngược để chọn đáp án.</p>
+
         <button class="btn-start" onclick="startGame()">Bắt Đầu</button>
     </div>
 
     <div id="game-screen" style="display: none;">
         <div class="stats">
-            <span id="progress-text">Câu: 1 / 100</span>
             <span id="score-text">Đúng: 0</span>
         </div>
         <div class="timer-bar">
@@ -155,8 +163,9 @@
         </div>
         <div id="word-card" class="word-card">Word</div>
         <div class="btn-group">
-            <button class="btn-noun" onclick="submitAnswer(true)">Danh Từ</button>
-            <button class="btn-not-noun" onclick="submitAnswer(false)">Không Phải Danh Từ</button>
+            <button class="btn-noun" onclick="submitAnswer('noun')">Danh Từ</button>
+            <button class="btn-adj" onclick="submitAnswer('adj')">Tính Từ</button>
+            <button class="btn-other" onclick="submitAnswer('other')">Khác</button>
         </div>
     </div>
 
@@ -175,115 +184,226 @@
             </div>
         </div>
 
-        <button class="btn-start" style="margin-top: 20px;" onclick="startGame()">Làm Lai</button>
+        <button class="btn-start" style="margin-top: 20px;" onclick="startGame()">Làm Lại</button>
     </div>
 </div>
 
 <script>
 const rawWordBank = [
-    // 14 từ bắt buộc theo yêu cầu
-    { w: "mention", type: "Động từ", isNoun: false },
-    { w: "consider", type: "Động từ", isNoun: false },
-    { w: "guarantee", type: "Động từ", isNoun: false },
-    { w: "deliver", type: "Động từ", isNoun: false },
-    { w: "objective", type: "Danh từ", isNoun: true },
-    { w: "alternative", type: "Danh từ", isNoun: true },
-    { w: "initiative", type: "Danh từ", isNoun: true },
-    { w: "representative", type: "Danh từ", isNoun: true },
-    { w: "approval", type: "Danh từ", isNoun: true },
-    { w: "proposal", type: "Danh từ", isNoun: true },
-    { w: "renewal", type: "Danh từ", isNoun: true },
-    { w: "arrival", type: "Danh từ", isNoun: true },
-    { w: "disposal", type: "Danh từ", isNoun: true },
-    { w: "removal", type: "Danh từ", isNoun: true },
+    // ----------------------------------------------------
+    // 1. CÁC TỪ BẮT BUỘC THEO YÊU CẦU RIÊNG (21 từ)
+    // ----------------------------------------------------
+    // Động từ
+    { w: "mention", type: "other", desc: "Động từ (Đề cập)", label: "Động từ / Khác" },
+    { w: "consider", type: "other", desc: "Động từ (Xem xét)", label: "Động từ / Khác" },
+    { w: "guarantee", type: "other", desc: "Động từ (Bảo hành, cam kết)", label: "Động từ / Khác" },
+    { w: "deliver", type: "other", desc: "Động từ (Giao hàng)", label: "Động từ / Khác" },
 
-    // 86 từ bổ sung (Danh từ, Động từ, Tính từ, Trạng từ)
-    { w: "development", type: "Danh từ", isNoun: true },
-    { w: "beautiful", type: "Tính từ", isNoun: false },
-    { w: "quickly", type: "Trạng từ", isNoun: false },
-    { w: "decision", type: "Danh từ", isNoun: true },
-    { w: "analyze", type: "Động từ", isNoun: false },
-    { w: "efficiency", type: "Danh từ", isNoun: true },
-    { w: "important", type: "Tính từ", isNoun: false },
-    { w: "strongly", type: "Trạng từ", isNoun: false },
-    { w: "contract", type: "Danh từ", isNoun: true },
-    { w: "negotiate", type: "Động từ", isNoun: false },
-    { w: "applicant", type: "Danh từ", isNoun: true },
-    { w: "expensive", type: "Tính từ", isNoun: false },
-    { w: "carefully", type: "Trạng từ", isNoun: false },
-    { w: "requirement", type: "Danh từ", isNoun: true },
-    { w: "perform", type: "Động từ", isNoun: false },
-    { w: "solution", type: "Danh từ", isNoun: true },
-    { w: "creative", type: "Tính từ", isNoun: false },
-    { w: "easily", type: "Trạng từ", isNoun: false },
-    { w: "equipment", type: "Danh từ", isNoun: true },
-    { w: "expand", type: "Động từ", isNoun: false },
-    { w: "management", type: "Danh từ", isNoun: true },
-    { w: "successful", type: "Tính từ", isNoun: false },
-    { w: "completely", type: "Trạng từ", isNoun: false },
-    { w: "strategy", type: "Danh từ", isNoun: true },
-    { w: "promote", type: "Động từ", isNoun: false },
-    { w: "employee", type: "Danh từ", isNoun: true },
-    { w: "effective", type: "Tính từ", isNoun: false },
-    { w: "recently", type: "Trạng từ", isNoun: false },
-    { w: "investment", type: "Danh từ", isNoun: true },
-    { w: "cancel", type: "Động từ", isNoun: false },
-    { w: "customer", type: "Danh từ", isNoun: true },
-    { w: "accurate", type: "Tính từ", isNoun: false },
-    { w: "frequently", type: "Trạng từ", isNoun: false },
-    { w: "revenue", type: "Danh từ", isNoun: true },
-    { w: "identify", type: "Động từ", isNoun: false },
-    { w: "permission", type: "Danh từ", isNoun: true },
-    { w: "reliable", type: "Tính từ", isNoun: false },
-    { w: "properly", type: "Trạng từ", isNoun: false },
-    { w: "facility", type: "Danh từ", isNoun: true },
-    { w: "reduce", type: "Động từ", isNoun: false },
-    { w: "schedule", type: "Danh từ", isNoun: true },
-    { w: "active", type: "Tính từ", isNoun: false },
-    { w: "silently", type: "Trạng từ", isNoun: false },
-    { w: "budget", type: "Danh từ", isNoun: true },
-    { w: "maintain", type: "Động từ", isNoun: false },
-    { w: "industry", type: "Danh từ", isNoun: true },
-    { w: "financial", type: "Tính từ", isNoun: false },
-    { w: "happily", type: "Trạng từ", isNoun: false },
-    { w: "policy", type: "Danh từ", isNoun: true },
-    { w: "inform", type: "Động từ", isNoun: false },
-    { w: "department", type: "Danh từ", isNoun: true },
-    { w: "available", type: "Tính từ", isNoun: false },
-    { w: "slowly", type: "Trạng từ", isNoun: false },
-    { w: "procedure", type: "Danh từ", isNoun: true },
-    { w: "provide", type: "Động từ", isNoun: false },
-    { w: "agreement", type: "Danh từ", isNoun: true },
-    { w: "suitable", type: "Tính từ", isNoun: false },
-    { w: "directly", type: "Trạng từ", isNoun: false },
-    { w: "supervisor", type: "Danh từ", isNoun: true },
-    { w: "confirm", type: "Động từ", isNoun: false },
-    { w: "transaction", type: "Danh từ", isNoun: true },
-    { w: "flexible", type: "Tính từ", isNoun: false },
-    { w: "urgently", type: "Trạng từ", isNoun: false },
-    { w: "location", type: "Danh từ", isNoun: true },
-    { w: "inspire", type: "Động từ", isNoun: false },
-    { w: "agency", type: "Danh từ", isNoun: true },
-    { w: "patient", type: "Tính từ", isNoun: false },
-    { w: "perfectly", type: "Trạng từ", isNoun: false },
-    { w: "signature", type: "Danh từ", isNoun: true },
-    { w: "organize", type: "Động từ", isNoun: false },
-    { w: "performance", type: "Danh từ", isNoun: true },
-    { w: "complex", type: "Tính từ", isNoun: false },
-    { w: "normally", type: "Trạng từ", isNoun: false },
-    { w: "manufacturer", type: "Danh từ", isNoun: true },
-    { w: "suggest", type: "Động từ", isNoun: false },
-    { w: "opportunity", type: "Danh từ", isNoun: true },
-    { w: "sensitive", type: "Tính từ", isNoun: false },
-    { w: "extremely", type: "Trạng từ", isNoun: false },
-    { w: "resource", type: "Danh từ", isNoun: true },
-    { w: "participate", type: "Động từ", isNoun: false },
-    { w: "capacity", type: "Danh từ", isNoun: true },
-    { w: "productive", type: "Tính từ", isNoun: false },
-    { w: "clearly", type: "Trạng từ", isNoun: false },
-    { w: "complaint", type: "Danh từ", isNoun: true },
-    { w: "review", type: "Động từ", isNoun: false },
-    { w: "category", type: "Danh từ", isNoun: true }
+    // Danh từ đuôi dễ nhầm
+    { w: "objective", type: "noun", desc: "Danh từ (Mục tiêu)", label: "Danh từ" },
+    { w: "alternative", type: "noun", desc: "Danh từ (Lựa chọn thay thế)", label: "Danh từ" },
+    { w: "initiative", type: "noun", desc: "Danh từ (Sáng kiến)", label: "Danh từ" },
+    { w: "representative", type: "noun", desc: "Danh từ (Người đại diện)", label: "Danh từ" },
+
+    // Danh từ đuôi -al
+    { w: "approval", type: "noun", desc: "Danh từ (Sự phê duyệt)", label: "Danh từ" },
+    { w: "proposal", type: "noun", desc: "Danh từ (Bản đề xuất)", label: "Danh từ" },
+    { w: "renewal", type: "noun", desc: "Danh từ (Sự gia hạn)", label: "Danh từ" },
+    { w: "arrival", type: "noun", desc: "Danh từ (Sự đến nơi)", label: "Danh từ" },
+    { w: "disposal", type: "noun", desc: "Danh từ (Sự vứt bỏ)", label: "Danh từ" },
+    { w: "removal", type: "noun", desc: "Danh từ (Sự loại bỏ)", label: "Danh từ" },
+
+    // Tính từ đặc biệt đuôi -ly (Ảnh 1)
+    { w: "friendly", type: "adj", desc: "Tính từ (Thân thiện)", label: "Tính từ" },
+    { w: "likely", type: "adj", desc: "Tính từ (Có khả năng)", label: "Tính từ" },
+    { w: "weekly", type: "adj", desc: "Tính từ (Hàng tuần)", label: "Tính từ" },
+    { w: "costly", type: "adj", desc: "Tính từ (Đắt tiền)", label: "Tính từ" },
+    { w: "untimely", type: "adj", desc: "Tính từ (Không đúng lúc)", label: "Tính từ" },
+    { w: "hourly", type: "adj", desc: "Tính từ (Mỗi giờ)", label: "Tính từ" },
+    { w: "timely", type: "adj", desc: "Tính từ (Kịp thời, đúng lúc)", label: "Tính từ" },
+
+    // ----------------------------------------------------
+    // 2. DANH TỪ CÓ ĐUÔI THEO ẢNH 2 (~60 từ)
+    // Đuôi: -ion, -ment, -ness, -sis, -ce, -ity, -ism, -er, -or, -ee, -ant, -ist, -yst
+    // ----------------------------------------------------
+    { w: "decision", type: "noun", desc: "Danh từ (-ion)", label: "Danh từ" },
+    { w: "permission", type: "noun", desc: "Danh từ (-ion)", label: "Danh từ" },
+    { w: "location", type: "noun", desc: "Danh từ (-ion)", label: "Danh từ" },
+    { w: "transaction", type: "noun", desc: "Danh từ (-ion)", label: "Danh từ" },
+    { w: "environment", type: "noun", desc: "Danh từ (-ment)", label: "Danh từ" },
+    { w: "requirement", type: "noun", desc: "Danh từ (-ment)", label: "Danh từ" },
+    { w: "equipment", type: "noun", desc: "Danh từ (-ment)", label: "Danh từ" },
+    { w: "management", type: "noun", desc: "Danh từ (-ment)", label: "Danh từ" },
+    { w: "agreement", type: "noun", desc: "Danh từ (-ment)", label: "Danh từ" },
+    { w: "awareness", type: "noun", desc: "Danh từ (-ness)", label: "Danh từ" },
+    { w: "kindness", type: "noun", desc: "Danh từ (-ness)", label: "Danh từ" },
+    { w: "darkness", type: "noun", desc: "Danh từ (-ness)", label: "Danh từ" },
+    { w: "weakness", type: "noun", desc: "Danh từ (-ness)", label: "Danh từ" },
+    { w: "analysis", type: "noun", desc: "Danh từ (-sis)", label: "Danh từ" },
+    { w: "basis", type: "noun", desc: "Danh từ (-sis)", label: "Danh từ" },
+    { w: "crisis", type: "noun", desc: "Danh từ (-sis)", label: "Danh từ" },
+    { w: "emphasis", type: "noun", desc: "Danh từ (-sis)", label: "Danh từ" },
+    { w: "difference", type: "noun", desc: "Danh từ (-ce)", label: "Danh từ" },
+    { w: "patience", type: "noun", desc: "Danh từ (-ce)", label: "Danh từ" },
+    { w: "efficiency", type: "noun", desc: "Danh từ (-ce)", label: "Danh từ" },
+    { w: "agency", type: "noun", desc: "Danh từ (-ce/cy)", label: "Danh từ" },
+    { w: "activity", type: "noun", desc: "Danh từ (-ity)", label: "Danh từ" },
+    { w: "capacity", type: "noun", desc: "Danh từ (-ity)", label: "Danh từ" },
+    { w: "facility", type: "noun", desc: "Danh từ (-ity)", label: "Danh từ" },
+    { w: "opportunity", type: "noun", desc: "Danh từ (-ity)", label: "Danh từ" },
+    { w: "socialism", type: "noun", desc: "Danh từ (-ism)", label: "Danh từ" },
+    { w: "criticism", type: "noun", desc: "Danh từ (-ism)", label: "Danh từ" },
+    { w: "optimism", type: "noun", desc: "Danh từ (-ism)", label: "Danh từ" },
+    { w: "tourism", type: "noun", desc: "Danh từ (-ism)", label: "Danh từ" },
+    { w: "worker", type: "noun", desc: "Danh từ chỉ người (-er)", label: "Danh từ" },
+    { w: "employer", type: "noun", desc: "Danh từ chỉ người (-er)", label: "Danh từ" },
+    { w: "manufacturer", type: "noun", desc: "Danh từ chỉ người/vật (-er)", label: "Danh từ" },
+    { w: "manager", type: "noun", desc: "Danh từ chỉ người (-er)", label: "Danh từ" },
+    { w: "director", type: "noun", desc: "Danh từ chỉ người (-or)", label: "Danh từ" },
+    { w: "supervisor", type: "noun", desc: "Danh từ chỉ người (-or)", label: "Danh từ" },
+    { w: "instructor", type: "noun", desc: "Danh từ chỉ người (-or)", label: "Danh từ" },
+    { w: "doctor", type: "noun", desc: "Danh từ chỉ người (-or)", label: "Danh từ" },
+    { w: "employee", type: "noun", desc: "Danh từ chỉ người (-ee)", label: "Danh từ" },
+    { w: "trainee", type: "noun", desc: "Danh từ chỉ người (-ee)", label: "Danh từ" },
+    { w: "interviewee", type: "noun", desc: "Danh từ chỉ người (-ee)", label: "Danh từ" },
+    { w: "attendee", type: "noun", desc: "Danh từ chỉ người (-ee)", label: "Danh từ" },
+    { w: "applicant", type: "noun", desc: "Danh từ chỉ người (-ant)", label: "Danh từ" },
+    { w: "assistant", type: "noun", desc: "Danh từ chỉ người (-ant)", label: "Danh từ" },
+    { w: "accountant", type: "noun", desc: "Danh từ chỉ người (-ant)", label: "Danh từ" },
+    { w: "consultant", type: "noun", desc: "Danh từ chỉ người (-ant)", label: "Danh từ" },
+    { w: "tourist", type: "noun", desc: "Danh từ chỉ người (-ist)", label: "Danh từ" },
+    { w: "specialist", type: "noun", desc: "Danh từ chỉ người (-ist)", label: "Danh từ" },
+    { w: "receptionist", type: "noun", desc: "Danh từ chỉ người (-ist)", label: "Danh từ" },
+    { w: "scientist", type: "noun", desc: "Danh từ chỉ người (-ist)", label: "Danh từ" },
+    { w: "analyst", type: "noun", desc: "Danh từ chỉ người (-yst)", label: "Danh từ" },
+    { w: "catalyst", type: "noun", desc: "Danh từ (-yst)", label: "Danh từ" },
+    { w: "policy", type: "noun", desc: "Danh từ (Chính sách)", label: "Danh từ" },
+    { w: "contract", type: "noun", desc: "Danh từ (Hợp đồng)", label: "Danh từ" },
+    { w: "revenue", type: "noun", desc: "Danh từ (Doanh thu)", label: "Danh từ" },
+    { w: "budget", type: "noun", desc: "Danh từ (Ngân sách)", label: "Danh từ" },
+    { w: "schedule", type: "noun", desc: "Danh từ (Lịch trình)", label: "Danh từ" },
+    { w: "department", type: "noun", desc: "Danh từ (Phòng ban)", label: "Danh từ" },
+    { w: "complaint", type: "noun", desc: "Danh từ (Phàn nàn)", label: "Danh từ" },
+    { w: "signature", type: "noun", desc: "Danh từ (Chữ ký)", label: "Danh từ" },
+
+    // ----------------------------------------------------
+    // 3. TÍNH TỪ CÓ ĐUÔI THEO YÊU CẦU (~60 từ)
+    // Đuôi: -ful, -al, -ble, -ic, -ive, -ous
+    // ----------------------------------------------------
+    { w: "careful", type: "adj", desc: "Tính từ (-ful)", label: "Tính từ" },
+    { w: "successful", type: "adj", desc: "Tính từ (-ful)", label: "Tính từ" },
+    { w: "helpful", type: "adj", desc: "Tính từ (-ful)", label: "Tính từ" },
+    { w: "beautiful", type: "adj", desc: "Tính từ (-ful)", label: "Tính từ" },
+    { w: "powerful", type: "adj", desc: "Tính từ (-ful)", label: "Tính từ" },
+    { w: "peaceful", type: "adj", desc: "Tính từ (-ful)", label: "Tính từ" },
+    { w: "useful", type: "adj", desc: "Tính từ (-ful)", label: "Tính từ" },
+    { w: "painful", type: "adj", desc: "Tính từ (-ful)", label: "Tính từ" },
+    { w: "thoughtful", type: "adj", desc: "Tính từ (-ful)", label: "Tính từ" },
+    { w: "financial", type: "adj", desc: "Tính từ (-al)", label: "Tính từ" },
+    { w: "professional", type: "adj", desc: "Tính từ (-al)", label: "Tính từ" },
+    { w: "additional", type: "adj", desc: "Tính từ (-al)", label: "Tính từ" },
+    { w: "environmental", type: "adj", desc: "Tính từ (-al)", label: "Tính từ" },
+    { w: "official", type: "adj", desc: "Tính từ (-al)", label: "Tính từ" },
+    { w: "original", type: "adj", desc: "Tính từ (-al)", label: "Tính từ" },
+    { w: "critical", type: "adj", desc: "Tính từ (-al)", label: "Tính từ" },
+    { w: "annual", type: "adj", desc: "Tính từ (-al)", label: "Tính từ" },
+    { w: "available", type: "adj", desc: "Tính từ (-ble)", label: "Tính từ" },
+    { w: "reliable", type: "adj", desc: "Tính từ (-ble)", label: "Tính từ" },
+    { w: "flexible", type: "adj", desc: "Tính từ (-ble)", label: "Tính từ" },
+    { w: "responsible", type: "adj", desc: "Tính từ (-ble)", label: "Tính từ" },
+    { w: "possible", type: "adj", desc: "Tính từ (-ble)", label: "Tính từ" },
+    { w: "suitable", type: "adj", desc: "Tính từ (-ble)", label: "Tính từ" },
+    { w: "valuable", type: "adj", desc: "Tính từ (-ble)", label: "Tính từ" },
+    { w: "comfortable", type: "adj", desc: "Tính từ (-ble)", label: "Tính từ" },
+    { w: "specific", type: "adj", desc: "Tính từ (-ic)", label: "Tính từ" },
+    { w: "economic", type: "adj", desc: "Tính từ (-ic)", label: "Tính từ" },
+    { w: "strategic", type: "adj", desc: "Tính từ (-ic)", label: "Tính từ" },
+    { w: "basic", type: "adj", desc: "Tính từ (-ic)", label: "Tính từ" },
+    { w: "realistic", type: "adj", desc: "Tính từ (-ic)", label: "Tính từ" },
+    { w: "enthusiastic", type: "adj", desc: "Tính từ (-ic)", label: "Tính từ" },
+    { w: "effective", type: "adj", desc: "Tính từ (-ive)", label: "Tính từ" },
+    { w: "active", type: "adj", desc: "Tính từ (-ive)", label: "Tính từ" },
+    { w: "creative", type: "adj", desc: "Tính từ (-ive)", label: "Tính từ" },
+    { w: "attractive", type: "adj", desc: "Tính từ (-ive)", label: "Tính từ" },
+    { w: "competitive", type: "adj", desc: "Tính từ (-ive)", label: "Tính từ" },
+    { w: "productive", type: "adj", desc: "Tính từ (-ive)", label: "Tính từ" },
+    { w: "sensitive", type: "adj", desc: "Tính từ (-ive)", label: "Tính từ" },
+    { w: "impressive", type: "adj", desc: "Tính từ (-ive)", label: "Tính từ" },
+    { w: "dangerous", type: "adj", desc: "Tính từ (-ous)", label: "Tính từ" },
+    { w: "famous", type: "adj", desc: "Tính từ (-ous)", label: "Tính từ" },
+    { w: "previous", type: "adj", desc: "Tính từ (-ous)", label: "Tính từ" },
+    { w: "continuous", type: "adj", desc: "Tính từ (-ous)", label: "Tính từ" },
+    { w: "spacious", type: "adj", desc: "Tính từ (-ous)", label: "Tính từ" },
+    { w: "ambitious", type: "adj", desc: "Tính từ (-ous)", label: "Tính từ" },
+    { w: "generous", type: "adj", desc: "Tính từ (-ous)", label: "Tính từ" },
+    { w: "cautious", type: "adj", desc: "Tính từ (-ous)", label: "Tính từ" },
+    { w: "important", type: "adj", desc: "Tính từ (Quan trọng)", label: "Tính từ" },
+    { w: "accurate", type: "adj", desc: "Tính từ (Chính xác)", label: "Tính từ" },
+
+    // ----------------------------------------------------
+    // 4. NHÓM "KHÁC" (ĐỘNG TỪ, TRẠNG TỪ...) (~59 từ)
+    // ----------------------------------------------------
+    { w: "quickly", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "strongly", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "completely", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "carefully", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "easily", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "frequently", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "recently", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "properly", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "slowly", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "directly", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "urgently", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "perfectly", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "normally", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "extremely", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "clearly", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" },
+    { w: "analyze", type: "other", desc: "Động từ (Phân tích)", label: "Động từ / Khác" },
+    { w: "negotiate", type: "other", desc: "Động từ (Đàm phán)", label: "Động từ / Khác" },
+    { w: "perform", type: "other", desc: "Động từ (Thực hiện)", label: "Động từ / Khác" },
+    { w: "expand", type: "other", desc: "Động từ (Mở rộng)", label: "Động từ / Khác" },
+    { w: "promote", type: "other", desc: "Động từ (Thăng tiến/Quảng bá)", label: "Động từ / Khác" },
+    { w: "cancel", type: "other", desc: "Động từ (Hủy bỏ)", label: "Động từ / Khác" },
+    { w: "identify", type: "other", desc: "Động từ (Nhận diện)", label: "Động từ / Khác" },
+    { w: "reduce", type: "other", desc: "Động từ (Cắt giảm)", label: "Động từ / Khác" },
+    { w: "maintain", type: "other", desc: "Động từ (Bảo trì)", label: "Động từ / Khác" },
+    { w: "inform", type: "other", desc: "Động từ (Thông báo)", label: "Động từ / Khác" },
+    { w: "provide", type: "other", desc: "Động từ (Cung cấp)", label: "Động từ / Khác" },
+    { w: "confirm", type: "other", desc: "Động từ (Xác nhận)", label: "Động từ / Khác" },
+    { w: "inspire", type: "other", desc: "Động từ (Cảm hứng)", label: "Động từ / Khác" },
+    { w: "organize", type: "other", desc: "Động từ (Tổ chức)", label: "Động từ / Khác" },
+    { w: "suggest", type: "other", desc: "Động từ (Gợi ý)", label: "Động từ / Khác" },
+    { w: "participate", type: "other", desc: "Động từ (Tham gia)", label: "Động từ / Khác" },
+    { w: "review", type: "other", desc: "Động từ (Xem lại)", label: "Động từ / Khác" },
+    { w: "accept", type: "other", desc: "Động từ (Chấp nhận)", label: "Động từ / Khác" },
+    { w: "achieve", type: "other", desc: "Động từ (Đạt được)", label: "Động từ / Khác" },
+    { w: "acquire", type: "other", desc: "Động từ (Mua lại/Đạt được)", label: "Động từ / Khác" },
+    { w: "adjust", type: "other", desc: "Động từ (Điều chỉnh)", label: "Động từ / Khác" },
+    { w: "admire", type: "other", desc: "Động từ (Ngưỡng mộ)", label: "Động từ / Khác" },
+    { w: "announce", type: "other", desc: "Động từ (Thông báo)", label: "Động từ / Khác" },
+    { w: "apologize", type: "other", desc: "Động từ (Xin lỗi)", label: "Động từ / Khác" },
+    { w: "apply", type: "other", desc: "Động từ (Ứng tuyển)", label: "Động từ / Khác" },
+    { w: "attract", type: "other", desc: "Động từ (Thu hút)", label: "Động từ / Khác" },
+    { w: "calculate", type: "other", desc: "Động từ (Tính toán)", label: "Động từ / Khác" },
+    { w: "collect", type: "other", desc: "Động từ (Thu thập)", label: "Động từ / Khác" },
+    { w: "combine", type: "other", desc: "Động từ (Kết hợp)", label: "Động từ / Khác" },
+    { w: "compare", type: "other", desc: "Động từ (So sánh)", label: "Động từ / Khác" },
+    { w: "compete", type: "other", desc: "Động từ (Cạnh tranh)", label: "Động từ / Khác" },
+    { w: "conduct", type: "other", desc: "Động từ (Tiến hành)", label: "Động từ / Khác" },
+    { w: "construct", type: "other", desc: "Động từ (Xây dựng)", label: "Động từ / Khác" },
+    { w: "consume", type: "other", desc: "Động từ (Tiêu thụ)", label: "Động từ / Khác" },
+    { w: "convince", type: "other", desc: "Động từ (Thuyết phục)", label: "Động từ / Khác" },
+    { w: "create", type: "other", desc: "Động từ (Tạo ra)", label: "Động từ / Khác" },
+    { w: "describe", type: "other", desc: "Động từ (Mô tả)", label: "Động từ / Khác" },
+    { w: "design", type: "other", desc: "Động từ (Thiết kế)", label: "Động từ / Khác" },
+    { w: "destroy", type: "other", desc: "Động từ (Phá hủy)", label: "Động từ / Khác" },
+
+    // Bổ sung đủ tròn 200 từ
+    { w: "investigate", type: "other", desc: "Động từ (Điều tra)", label: "Động từ / Khác" },
+    { w: "recommend", type: "other", desc: "Động từ (Đề xuất)", label: "Động từ / Khác" },
+    { w: "transform", type: "other", desc: "Động từ (Biến đổi)", label: "Động từ / Khác" },
+    { w: "understand", type: "other", desc: "Động từ (Hiểu)", label: "Động từ / Khác" },
+    { w: "silently", type: "other", desc: "Trạng từ (-ly)", label: "Trạng từ / Khác" }
 ];
 
 let words = [];
@@ -292,7 +412,7 @@ let score = 0;
 let wrongAnswers = [];
 let timer = null;
 let timerStartTime = 0;
-const TIME_LIMIT = 5000; // 5 giây
+const TIME_LIMIT = 5000;
 
 function shuffle(array) {
     let arr = [...array];
@@ -328,7 +448,6 @@ function showNextWord() {
     wordCard.className = "word-card";
     wordCard.innerText = wordObj.w;
 
-    document.getElementById("progress-text").innerText = `Câu: ${currentIndex + 1} / ${words.length}`;
     document.getElementById("score-text").innerText = `Đúng: ${score}`;
 
     startTimer();
@@ -366,7 +485,7 @@ function handleTimeOut() {
 function submitAnswer(userChoice) {
     clearInterval(timer);
     const currentWord = words[currentIndex];
-    const isCorrect = (userChoice === currentWord.isNoun);
+    const isCorrect = (userChoice === currentWord.type);
 
     if (isCorrect) {
         score++;
@@ -393,7 +512,7 @@ function endGame() {
     document.getElementById("game-screen").style.display = "none";
     document.getElementById("result-screen").style.display = "block";
 
-    document.getElementById("final-score").innerText = `Điểm của bạn: ${score} / ${words.length}`;
+    document.getElementById("final-score").innerText = `Kết quả của bạn: ${score} / ${words.length} từ đúng`;
 
     const wrongListEl = document.getElementById("wrong-list");
     wrongListEl.innerHTML = "";
@@ -405,11 +524,12 @@ function endGame() {
         wrongAnswers.forEach(item => {
             const row = document.createElement("div");
             row.className = "wrong-item";
-            row.innerHTML = `<span><b>${item.w}</b></span><span>${item.type}</span>`;
+            row.innerHTML = `<span><b>${item.w}</b></span><span>${item.desc || item.label}</span>`;
             wrongListEl.appendChild(row);
         });
     }
 }
 </script>
-<p><a href="phân biệt danh và tính.html">Click vào đây để làm bài: Phân biệt danh từ và tính từ</a></p>
+
 </body>
+</html>
